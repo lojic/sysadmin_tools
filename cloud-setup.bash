@@ -103,6 +103,11 @@ function apt_get_packages_common() {
 function apt_get_packages() {
   display_message "Installing packages"
   apt_get_packages_common
+
+  # Install postfix before rkhunter, or the latter will install exim4
+  if [ "$POSTFIX_DOMAIN" ]; then
+    install_postfix
+  fi
   
   # rkhunter root kit checker
   if [ "$RKHUNTER" = 1 ]; then
@@ -149,10 +154,6 @@ function apt_get_packages() {
     sed -i.orig -e "/^-m 64/c-m ${MEMCACHED_RAM}" /etc/memcached.conf
   fi
   
-  if [ "$POSTFIX_DOMAIN" ]; then
-    install_postfix
-  fi
-  
   if [ "$POSTGRES" = 1 ]; then
     install_postgres
   fi
@@ -175,6 +176,8 @@ function apt_get_packages() {
     install_fail2ban
   fi
   
+  display_message "Clean up unneeded packages"
+  apt-get -y autoremove
 }
 
 function configure_logrotate() {
@@ -264,6 +267,11 @@ EOF
   chmod 755 /etc/init.d/nginx
   display_message "Setting update-rc.d defaults for nginx"
   update-rc.d nginx defaults  
+}
+
+function configure_ntp() {
+  echo "/usr/sbin/ntpdate -su time.nist.gov" > /etc/cron.daily/ntpdate
+  chmod 755 /etc/cron.daily/ntpdate
 }
 
 function configure_timezone() {
@@ -493,6 +501,10 @@ function install_tclink() {
     cd $prefix
     display_message "Patching tclink"
     # Patch rb_tclink.c & tctest.rb
+    # rb_tclink.c needs to be patched because
+    #   RSTRING(...)->ptr now needs to be RSTRING_PTR(...) in Ruby 1.9.2
+    # tctest.rb is patched to return a non-zero return code on error
+    #   so that the script will abort
     cat > patch.txt <<EOF
 diff --git a/rb_tclink.c b/rb_tclink.c
 index 1443c15..890b09f 100644
@@ -617,4 +629,5 @@ install_rails $RAILS_VERSION
 install_passenger
 install_gems
 install_tclink $TCLINK_SOURCE
+configure_ntp
 epilogue
