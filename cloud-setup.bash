@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This Bash script sets up a new Ubuntu web server.
+# It has been tested on Ubuntu 10.10
 
 # Copyright (C) 2011 by Brian J. Adkins
 
