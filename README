@@ -1,9 +1,1 @@
-A couple of scripts to setup a new Ubuntu server.
-
-cloud-setup-ubuntu-root.bash
-============================
-A bash script to be run as root.
-
-cloud-setup-ubuntu.rb
-=====================
-A Ruby script to be run as a normal user.
+A bash script to fully setup an Ubuntu web server.
