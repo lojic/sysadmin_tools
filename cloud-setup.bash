@@ -585,8 +585,10 @@ function secure_ssh() {
   # Ensure root can't ssh in
   sed -i -e '/PermitRootLogin/s/yes/no/' /etc/ssh/sshd_config
 
-  # Don't allow password login
-  sed -i -e '/^#PasswordAuthentication yes/cPasswordAuthentication no' /etc/ssh/sshd_config
+  # Don't allow password login if public key has been supplied
+  if [ "$PUBLIC_KEY_URL" ]; then
+    sed -i -e '/^#PasswordAuthentication yes/cPasswordAuthentication no' /etc/ssh/sshd_config
+  fi
 
   # Restart sshd
   /etc/init.d/ssh restart
