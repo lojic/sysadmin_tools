@@ -31,9 +31,11 @@ USERNAME=deploy
 NOTIFICATION_EMAIL=  # fail2ban will send emails to this address
 
 # To install postfix, specify a non-empty domain name for POSTFIX_DOMAIN
+# e.g. POSTFIX_DOMAIN=yourdomain.com
 POSTFIX_DOMAIN=
 
-# To setup ssh keys, specify a url containing a public key
+# To setup ssh keys, specify a full url containing a public key
+# e.g. PUBLIC_KEY_URL=http://yourdomain.com/id_rsa.pub
 PUBLIC_KEY_URL=
 
 
@@ -408,6 +410,7 @@ function install_rails() {
   local rails_version=$1
 
   if [ $rails_version ]; then
+    apt-get -y libxslt-dev libxml2-dev  # needed by nokogiri
     display_message "Installing Rails ${rails_version} - this will take a while"
     gem install --no-rdoc --no-ri -v ${rails_version} rails
   fi
