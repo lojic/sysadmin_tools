@@ -410,8 +410,8 @@ function install_rails() {
   local rails_version=$1
 
   if [ $rails_version ]; then
-    apt-get -y libxslt-dev libxml2-dev  # needed by nokogiri
     display_message "Installing Rails ${rails_version} - this will take a while"
+    apt-get -y install libxslt-dev libxml2-dev  # needed by nokogiri
     gem install --no-rdoc --no-ri -v ${rails_version} rails
   fi
 }
