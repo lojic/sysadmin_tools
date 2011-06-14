@@ -33,6 +33,7 @@ NOTIFICATION_EMAIL=  # fail2ban will send emails to this address
 # To install postfix, specify a non-empty domain name for POSTFIX_DOMAIN
 # e.g. POSTFIX_DOMAIN=yourdomain.com
 POSTFIX_DOMAIN=
+POSTFIX_NO_TLS=1   # Don't use tls
 
 # To setup ssh keys, specify a full url containing a public key
 # e.g. PUBLIC_KEY_URL=http://yourdomain.com/id_rsa.pub
@@ -52,6 +53,7 @@ MLTON=1                  # Install MLton Standard ML Compiler via apt-get
 PASSENGER=1              # Install Phusion Passenger and nginx
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
+RSSH=1                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=1              # Install shorewall firewall via apt-get
 
@@ -179,6 +181,11 @@ function apt_get_packages() {
     install_fail2ban
   fi
   
+  if [ "$RSSH" = 1 ]; then
+    display_message "Installing rssh"
+    apt-get -y install rssh
+  fi
+
   display_message "Clean up unneeded packages"
   apt-get -y autoremove
 }
@@ -396,6 +403,10 @@ function install_postfix() {
   sed -i -e "/^myhostname/cmyhostname = ${POSTFIX_DOMAIN}" /etc/postfix/main.cf
   sed -i -e "/^mydestination/cmydestination = localhost.localdomain, localhost" /etc/postfix/main.cf
   sed -i -e "/^inet_interfaces/cinet_interfaces = loopback-only" /etc/postfix/main.cf
+  
+  if [ "$POSTFIX_NO_TLS" = 1]; then
+      sed -i -e "/^smtpd_use_tls=yes/csmtpd_use_tls=no" /etc/postfix/main.cf
+  end
 }
 
 function install_postgres() {
@@ -581,6 +592,14 @@ function epilogue() {
 Test the firewall via: shorewall safe-start (and verify ssh)
 EOF
   fi
+
+  if [ "$RSSH" = 1 ]; then
+      cat <<EOF
+ 
+rssh config file is /etc/rssh.conf
+EOF
+  fi
+
   cat <<EOF
 
 Root has been disabled from logging in via ssh.
