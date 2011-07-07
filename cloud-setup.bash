@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# This Bash script sets up a new Ubuntu web server.
-# It has been tested on Ubuntu 10.10
+# This Bash script sets up a new Ubuntu 11.04 (Natty) web server.
 
 # Copyright (C) 2011 by Brian J. Adkins
 
@@ -48,12 +47,12 @@ FAIL2BAN=1               # Install fail2ban via apt-get
 GEM_CREDITCARD=1         # Ruby gem: creditcard
 GEM_JSON=1               # Ruby gem: json
 GEM_WILL_PAGINATE=1      # Ruby gem: will_paginate
-GHC=1                    # Install Glasgow Haskell Compiler via apt-get
-MLTON=1                  # Install MLton Standard ML Compiler via apt-get
+GHC=0                    # Install Glasgow Haskell Compiler via apt-get
+MLTON=0                  # Install MLton Standard ML Compiler via apt-get
 PASSENGER=1              # Install Phusion Passenger and nginx
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
-RSSH=1                   # Install rssh restricted shell
+RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=1              # Install shorewall firewall via apt-get
 
@@ -64,7 +63,7 @@ export DEBIAN_FRONTEND=noninteractive
 MEMCACHED_RAM=16
 
 # To install Rails, set RAILS_VERSION to a non-empty version string
-RAILS_VERSION=3.0.7
+RAILS_VERSION=3.0.9
 
 # To install Ruby, specify a url for source
 RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.2-p180.tar.gz
@@ -353,6 +352,15 @@ function initialize() {
   THTTPD_PORT=${THTTPD_PORT:-0}
 }
 
+function update_sources_list() {
+  cat >> /etc/apt/sources.list <<EOF
+deb http://us.archive.ubuntu.com/ubuntu/ natty universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ natty universe
+deb http://us.archive.ubuntu.com/ubuntu/ natty-updates universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ natty-updates universe
+EOF
+}
+
 function install_fail2ban() {
   display_message "Installing fail2ban"
   apt-get -y install fail2ban
@@ -404,9 +412,9 @@ function install_postfix() {
   sed -i -e "/^mydestination/cmydestination = localhost.localdomain, localhost" /etc/postfix/main.cf
   sed -i -e "/^inet_interfaces/cinet_interfaces = loopback-only" /etc/postfix/main.cf
   
-  if [ "$POSTFIX_NO_TLS" = 1]; then
+  if [ "$POSTFIX_NO_TLS" = 1 ]; then
       sed -i -e "/^smtpd_use_tls=yes/csmtpd_use_tls=no" /etc/postfix/main.cf
-  end
+  fi
 }
 
 function install_postgres() {
@@ -640,6 +648,7 @@ function update_ubuntu() {
 #------------------------------------------------------------
 
 initialize
+update_sources_list
 configure_timezone $TIMEZONE
 display_message 'Changing root password:'
 passwd # Change root passwd
