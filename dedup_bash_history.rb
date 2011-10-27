@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# Copyright (C) 2011 by Brian J. Adkins
+#
 # NOTE: Run from home directory
 #
 # This program will eliminate duplicate lines in .bash_history and
@@ -29,7 +31,7 @@ TEMP_FILE    = '.bash_history_temp'
 
 File.open(HISTORY_FILE, "r") do |hist_file|
   File.open(TEMP_FILE, "w") do |temp_file|
-    hist_file.readlines.reverse.uniq.reverse.each {|line| temp_file.puts line }
+    hist_file.readlines.reverse.uniq.reverse.each {|line| temp_file.puts(line) }
   end
 end
 
