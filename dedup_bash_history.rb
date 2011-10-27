@@ -33,6 +33,5 @@ File.open(HISTORY_FILE, "r") do |hist_file|
   end
 end
 
-# Replace history file with deduped file
 `mv #{TEMP_FILE} #{HISTORY_FILE}`
 
