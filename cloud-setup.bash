@@ -38,7 +38,6 @@ POSTFIX_NO_TLS=1   # Don't use tls
 # e.g. PUBLIC_KEY_URL=http://yourdomain.com/id_rsa.pub
 PUBLIC_KEY_URL=
 
-
 # Boolean flags 1 => true, 0 => false
 CHKROOTKIT=1             # Install chkrootkit root kit checker via apt-get
 ECHO_COMMANDS=0          # Echo commands from script
@@ -59,14 +58,17 @@ SHOREWALL=1              # Install shorewall firewall via apt-get
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
 
+# To install libyaml, specify a url for source
+LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
+
 # To install memcached, specify a RAM amount > 0 e.g. 16
 MEMCACHED_RAM=16
 
 # To install Rails, set RAILS_VERSION to a non-empty version string
-RAILS_VERSION=3.0.9
+RAILS_VERSION=3.0.11
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.2-p180.tar.gz
+RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p0.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-3.4.4-ruby.tar.gz
@@ -102,6 +104,24 @@ function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
              libreadline5-dev libssl-dev libxml2-dev locate rsync zlib1g-dev
+}
+
+function install_libyaml() {
+  local libyaml_src=$1
+  
+  if [ $libyaml_src ]; then
+    display_message "Installing libyaml"
+    pushd /usr/local/src
+    wget $libyaml_src
+    local fname=$(file_name_from_path $libyaml_src)
+    tar xzf $fname
+    local prefix=${fname%\.tar\.gz}
+    cd $prefix
+    ./configure
+    make
+    make install
+    popd
+  fi
 }
 
 function apt_get_packages() {
@@ -322,6 +342,11 @@ function create_user() {
     # use C-\ instead of C-a to avoid Emacs conflicts
     echo 'escape \034\034' > /home/${username}/.screenrc
     chown ${username}:${username} /home/${username}/.screenrc
+    cat >> /home/${username}/.bashrc <<'EOF'
+if [ "$TERM" != "screen"  ]; then
+  screen -d -R
+fi
+EOF
   fi
 }
 
@@ -656,6 +681,7 @@ create_user $USERNAME $PUBLIC_KEY_URL
 secure_ssh
 update_ubuntu
 apt_get_packages
+install_libyaml $LIBYAML_SOURCE
 install_ruby $RUBY_SOURCE
 install_rails $RAILS_VERSION
 install_passenger
