@@ -22,6 +22,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+
+#  **********
+#  *  NOTE  *
+#  **********
+#
+#  Before running this script, execute the following command to set the locale:
+#  update-locale LANG=en_US.UTF-8
+#  And then logout/login to "set" the locale. I tried source .bashrc to no avail
+
+
+
 #------------------------------------------------------------
 # Modify values below here
 #------------------------------------------------------------
