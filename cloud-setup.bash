@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# This Bash script sets up a new Ubuntu 11.04 (Natty) web server.
+# This Bash script sets up a new Ubuntu 11.10 (Oneiric Ocelot) web server.
 
-# Copyright (C) 2011 by Brian J. Adkins
+# Copyright (C) 2011-2012 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,6 @@
 #  Before running this script, execute the following command to set the locale:
 #  update-locale LANG=en_US.UTF-8
 #  And then logout/login to "set" the locale. I tried source .bashrc to no avail
-
 
 
 #------------------------------------------------------------
@@ -114,7 +113,7 @@ WWW_DIR=/var/www
 function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
-             libreadline5-dev libssl-dev libxml2-dev locate rsync zlib1g-dev
+             libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev
 }
 
 function install_libyaml() {
