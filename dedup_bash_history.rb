@@ -29,13 +29,9 @@
 # ls
 # echo "hello
 
-BACKUP_FILE  = '~/.bash_history_backup'
-HISTORY_FILE = '~/.bash_history'
-TEMP_FILE    = '~/.bash_history_temp'
-
-history_file = File.expand_path(HISTORY_FILE)
-backup_file = File.expand_path(BACKUP_FILE)
-temp_file = File.expand_path(TEMP_FILE)
+history_file = File.expand_path('~/.bash_history')
+backup_file = File.expand_path('~/.bash_history_backup')
+temp_file = File.expand_path('~/.bash_history_temp')
 
 `cp #{history_file} #{backup_file}`
 
