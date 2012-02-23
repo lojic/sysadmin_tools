@@ -29,17 +29,36 @@
 # ls
 # echo "hello
 
-history_file = File.expand_path('~/.bash_history')
-backup_file = File.expand_path('~/.bash_history_backup')
-temp_file = File.expand_path('~/.bash_history_temp')
+module DeDuper
+  NUM_BACKUP_FILES = 20
+  HISTORY_FILE     = File.expand_path('~/.bash_history')
+  BACKUP_FILE      = File.expand_path('~/.bash_history_backup')
+  TEMP_FILE        = File.expand_path('~/.bash_history_temp')
 
-`cp #{history_file} #{backup_file}`
+  module_function
 
-File.open(history_file, "r") do |hfile|
-  File.open(temp_file, "w") do |tfile|
-    hfile.readlines.reverse.uniq.reverse.each {|line| tfile.puts(line) }
+  def rotate_backup_files n
+    return if n < 1
+
+    if File.exist?(current_file = "#{BACKUP_FILE}#{n}")
+      `cp #{current_file} #{BACKUP_FILE}#{n+1}`
+    end
+
+    rotate_backup_files(n-1)
+  end
+
+  def run
+    rotate_backup_files(NUM_BACKUP_FILES)
+    `cp #{HISTORY_FILE} #{BACKUP_FILE}1`
+
+    File.open(HISTORY_FILE, "r") do |hfile|
+      File.open(TEMP_FILE, "w") do |tfile|
+        hfile.readlines.reverse.uniq.reverse.each {|line| tfile.puts(line) }
+      end
+    end
+
+    `mv #{TEMP_FILE} #{HISTORY_FILE}`
   end
 end
 
-`mv #{temp_file} #{history_file}`
-
+DeDuper.run
