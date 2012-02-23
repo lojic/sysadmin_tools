@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # This Bash script sets up a new Ubuntu 11.10 (Oneiric Ocelot) web server.
-
+#
+# https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
+#
 # Copyright (C) 2011-2012 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -75,7 +77,7 @@ LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
 MEMCACHED_RAM=16
 
 # To install Rails, set RAILS_VERSION to a non-empty version string
-RAILS_VERSION=3.0.11
+RAILS_VERSION=3.2.1
 
 # To install Ruby, specify a url for source
 RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p0.tar.gz
