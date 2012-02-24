@@ -30,9 +30,14 @@
 # echo "hello
 
 module DeDuper
-  NUM_BACKUP_FILES = 20
-  HISTORY_FILE     = File.expand_path('~/.bash_history')
   BACKUP_FILE      = File.expand_path('~/.bash_history_backup')
+  HISTORY_FILE     = File.expand_path('~/.bash_history')
+
+  # Occasionally, the .bash_history file can be truncated to the
+  # default size of 500 lines. If this occurs, I don't want to do
+  # anything until the file has been repaired.
+  MIN_HIST_LINES   = 4000
+  NUM_BACKUP_FILES = 20
   TEMP_FILE        = File.expand_path('~/.bash_history_temp')
 
   module_function
@@ -41,13 +46,22 @@ module DeDuper
     return if n < 1
 
     if File.exist?(current_file = "#{BACKUP_FILE}#{n}")
-      `cp #{current_file} #{BACKUP_FILE}#{n+1}`
+      `mv #{current_file} #{BACKUP_FILE}#{n+1}`
     end
 
     rotate_backup_files(n-1)
   end
 
+  def history_file_size path
+    `wc #{HISTORY_FILE}`.strip.split[0].to_i rescue 0
+  end
+
   def run
+    if history_file_size(HISTORY_FILE) < MIN_HIST_LINES
+      puts "History file is too small - exiting"
+      exit 0
+    end
+
     rotate_backup_files(NUM_BACKUP_FILES)
     `cp #{HISTORY_FILE} #{BACKUP_FILE}1`
 
