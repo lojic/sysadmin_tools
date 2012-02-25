@@ -35,7 +35,9 @@ module DeDuper
 
   # Occasionally, the .bash_history file can be truncated to the
   # default size of 500 lines. If this occurs, I don't want to do
-  # anything until the file has been repaired.
+  # anything until the file has been repaired. The MIN_HIST_LINES
+  # value should be set to a value for which the number of lines in
+  # the history file will never fall below.
   MIN_HIST_LINES   = 4000
   NUM_BACKUP_FILES = 20
   TEMP_FILE        = File.expand_path('~/.bash_history_temp')
