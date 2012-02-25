@@ -80,7 +80,7 @@ MEMCACHED_RAM=16
 RAILS_VERSION=3.2.1
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p0.tar.gz
+RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p125.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-3.4.4-ruby.tar.gz
