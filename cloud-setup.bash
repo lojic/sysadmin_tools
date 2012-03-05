@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This Bash script sets up a new Ubuntu 11.10 (Oneiric Ocelot) web server.
+# Note: update update_sources_list() when switching Ubuntu versions
 #
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
@@ -391,10 +392,10 @@ function initialize() {
 
 function update_sources_list() {
   cat >> /etc/apt/sources.list <<EOF
-deb http://us.archive.ubuntu.com/ubuntu/ natty universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ natty universe
-deb http://us.archive.ubuntu.com/ubuntu/ natty-updates universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ natty-updates universe
+deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ oneiric universe
+deb http://us.archive.ubuntu.com/ubuntu/ oneiric-updates universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ oneiric-updates universe
 EOF
 }
 
