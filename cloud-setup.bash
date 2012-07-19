@@ -59,7 +59,7 @@ FAIL2BAN=1               # Install fail2ban via apt-get
 GEM_CREDITCARD=1         # Ruby gem: creditcard
 GEM_JSON=1               # Ruby gem: json
 GEM_WILL_PAGINATE=1      # Ruby gem: will_paginate
-GHC=0                    # Install Glasgow Haskell Compiler via apt-get
+GHC=1                    # Install Glasgow Haskell Compiler via apt-get
 MLTON=0                  # Install MLton Standard ML Compiler via apt-get
 PASSENGER=1              # Install Phusion Passenger and nginx
 POSTGRES=1               # Install Postgres database via apt-get
@@ -81,7 +81,7 @@ MEMCACHED_RAM=16
 RAILS_VERSION=3.2.1
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p125.tar.gz
+RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p194.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-3.4.4-ruby.tar.gz
