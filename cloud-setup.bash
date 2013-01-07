@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# This Bash script sets up a new Ubuntu 11.10 (Oneiric Ocelot) web server.
-# Note: update update_sources_list() when switching Ubuntu versions
-#
+# This Bash script sets up a new Ubuntu 12.04 LTS (Precise Pangolin) web server.
+# ********
+# * NOTE * update update_sources_list() when switching Ubuntu versions
+# ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
 # Copyright (C) 2011-2012 by Brian J. Adkins
@@ -40,6 +41,8 @@
 #------------------------------------------------------------
 
 USERNAME=deploy
+APP_NAME=
+APP_DOMAIN=
 NOTIFICATION_EMAIL=  # fail2ban will send emails to this address
 
 # To install postfix, specify a non-empty domain name for POSTFIX_DOMAIN
@@ -52,21 +55,19 @@ POSTFIX_NO_TLS=1   # Don't use tls
 PUBLIC_KEY_URL=
 
 # Boolean flags 1 => true, 0 => false
+BUNDLER=1                # Install bundler gem
 CHKROOTKIT=1             # Install chkrootkit root kit checker via apt-get
 ECHO_COMMANDS=0          # Echo commands from script
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
-GEM_CREDITCARD=1         # Ruby gem: creditcard
-GEM_JSON=1               # Ruby gem: json
-GEM_WILL_PAGINATE=1      # Ruby gem: will_paginate
-GHC=1                    # Install Glasgow Haskell Compiler via apt-get
+GHC=0                    # Install Glasgow Haskell Compiler via apt-get
 MLTON=0                  # Install MLton Standard ML Compiler via apt-get
-PASSENGER=1              # Install Phusion Passenger and nginx
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=1              # Install shorewall firewall via apt-get
+UNICORN=1                # Install Unicorn
 
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
@@ -77,11 +78,11 @@ LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
 # To install memcached, specify a RAM amount > 0 e.g. 16
 MEMCACHED_RAM=16
 
-# To install Rails, set RAILS_VERSION to a non-empty version string
-RAILS_VERSION=3.2.1
+# To install nginx, specify a url for source
+NGINX_SOURCE=http://nginx.org/download/nginx-1.2.2.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p194.tar.gz
+RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p125.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-3.4.4-ruby.tar.gz
@@ -97,31 +98,19 @@ WWW_DIR=/var/www
 #------------------------------------------------------------
 
 #------------------------------------------------------------
-# Help Information:
-#
-# nginx:
-#   example server block:
-#      server {
-#        listen 80;
-#        server_name www.yourhost.com;
-#        root /somewhere/public;   # <--- be sure to point to 'public'!
-#        passenger_enabled on;
-#      }
-#------------------------------------------------------------
-
-#------------------------------------------------------------
 # Functions
 #------------------------------------------------------------
 
 function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
-             libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev
+             libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev \
+             libxslt-dev
 }
 
 function install_libyaml() {
   local libyaml_src=$1
-  
+
   if [ $libyaml_src ]; then
     display_message "Installing libyaml"
     pushd /usr/local/src
@@ -145,14 +134,14 @@ function apt_get_packages() {
   if [ "$POSTFIX_DOMAIN" ]; then
     install_postfix
   fi
-  
+
   # rkhunter root kit checker
   if [ "$RKHUNTER" = 1 ]; then
     display_message "Installing rkhunter"
     apt-get -y install rkhunter
     # The rkhunter --update command may have a non-zero return code
     # even when no error occurs. From the man page:
-    # 
+    #
     # An exit code of zero for  this  command  option  means  that  no
     # updates  were  available.  An  exit  code  of  one  means that a
     # download error occurred, and a code of two means that  no  error
@@ -165,16 +154,16 @@ function apt_get_packages() {
     fi
     set -e
   fi
-  
+
   if [ "$CHKROOTKIT" = 1 ]; then
     display_message "Installing chkrootkit"
     apt-get -y install chkrootkit
   fi
-  
+
   if [ "$SHOREWALL" = 1 ]; then
     install_shorewall_firewall
   fi
-  
+
   if [ "$EMACS" = 1 ]; then
     display_message "Installing emacs"
     apt-get -y install emacs23-nox
@@ -190,29 +179,24 @@ function apt_get_packages() {
     apt-get -y install memcached
     sed -i.orig -e "/^-m 64/c-m ${MEMCACHED_RAM}" /etc/memcached.conf
   fi
-  
+
   if [ "$POSTGRES" = 1 ]; then
     install_postgres
   fi
-  
+
   if [ "$THTTPD_PORT" -gt 0 ]; then
     install_thttpd
   fi
-  
-  if [ "$PASSENGER" = 1 ]; then
-    display_message "Installing libcurl4-openssl-dev for passenger"
-    apt-get -y install libcurl4-openssl-dev
-  fi
-  
+
   if [ "$MLTON" = 1 ]; then
     display_message "Installing mlton"
     apt-get -y install mlton
   fi
-  
+
   if [ "$FAIL2BAN" = 1 ]; then
     install_fail2ban
   fi
-  
+
   if [ "$RSSH" = 1 ]; then
     display_message "Installing rssh"
     apt-get -y install rssh
@@ -233,11 +217,23 @@ function configure_logrotate() {
     endscript
 }
 EOF
+
+# Rotate Rails application logs
+# /home/deploy/current/log/*.log {
+#   daily
+#   missingok
+#   rotate 7
+#   compress
+#   delaycompress
+#   notifempty
+#   copytruncate
+# }
+
 }
 
 function configure_nginx() {
   cat > /etc/init.d/nginx <<'EOF'
-# Description: Startup script for nginx webserver on Debian. Place in /etc/init.d and 
+# Description: Startup script for nginx webserver on Debian. Place in /etc/init.d and
 # run 'sudo update-rc.d nginx defaults', or use the appropriate command on your
 # distro.
 #
@@ -289,10 +285,10 @@ d_reload
   restart)
         echo -n "Restarting $DESC: $NAME"
         d_stop
-        # One second might not be time enough for a daemon to stop, 
-        # if this happens, d_start will fail (and dpkg will break if 
+        # One second might not be time enough for a daemon to stop,
+        # if this happens, d_start will fail (and dpkg will break if
         # the package is being upgraded). Change the timeout if needed
-        # be, or change d_stop to have start-stop-daemon use --retry. 
+        # be, or change d_stop to have start-stop-daemon use --retry.
         # Notice that using --retry slows down the shutdown process somewhat.
         sleep 1
         d_start
@@ -308,7 +304,112 @@ exit 0
 EOF
   chmod 755 /etc/init.d/nginx
   display_message "Setting update-rc.d defaults for nginx"
-  update-rc.d nginx defaults  
+  update-rc.d nginx defaults
+  cp /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/orig.nginx.conf
+  cat > /usr/local/nginx/conf/nginx.conf <<EOF
+#user  nobody;
+worker_processes  4;
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+pid        logs/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+  include       mime.types;
+  default_type  application/octet-stream;
+
+  log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+  log_format post_data '$remote_addr - $request_body';
+
+  client_max_body_size 30M;
+
+  access_log  logs/access.log  main;
+
+  sendfile        on;
+  #tcp_nopush     on;
+  #keepalive_timeout  0;
+  keepalive_timeout  65;
+
+  gzip  on;
+  gzip_proxied any;
+  gzip_types application/xml text/xml;
+
+  upstream app_server {
+    server localhost:4311;
+  }
+
+  server {
+    server_name  www.$APP_DOMAIN;
+    rewrite ^(.*) http://$APP_DOMAIN\$1 permanent;
+  }
+
+  server {
+    client_max_body_size 30M;
+    listen       80;
+    server_name  $APP_DOMAIN;
+    root /home/$USERNAME/$APP_NAME/current/public;
+
+    # rewrite for maintenance
+    if (-f \$document_root/system/maintenance.html) {
+      rewrite  ^(.*)\$  /maintenance.html break;
+    }
+
+    # Prefer to serve static files directly from nginx to avoid unnecessary
+    # data copies from the application server.
+    #
+    # try_files directive appeared in in nginx 0.7.27 and has stabilized
+    # over time.  Older versions of nginx (e.g. 0.6.x) requires
+    # "if (!-f \$request_filename)" which was less efficient:
+    # http://bogomips.org/unicorn.git/tree/examples/nginx.conf?id=v3.3.1#n127
+    try_files \$uri/index.html \$uri.html \$uri @app;
+
+    location @app {
+      # an HTTP header important enough to have its own Wikipedia entry:
+      #   http://en.wikipedia.org/wiki/X-Forwarded-For
+      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+
+      # enable this if and only if you use HTTPS, this helps Rack
+      # set the proper protocol for doing redirects:
+      # proxy_set_header X-Forwarded-Proto https;
+
+      # pass the Host: header from the client right along so redirects
+      # can be set properly within the Rack application
+      proxy_set_header Host \$http_host;
+
+      # we don't want nginx trying to do something clever with
+      # redirects, we set the Host: header above already.
+      proxy_redirect off;
+
+      # set "proxy_buffering off" *only* for Rainbows! when doing
+      # Comet/long-poll/streaming.  It's also safe to set if you're using
+      # only serving fast clients with Unicorn + nginx, but not slow
+      # clients.  You normally want nginx to buffer responses to slow
+      # clients, even with Rails 3.1 streaming because otherwise a slow
+      # client can become a bottleneck of Unicorn.
+      #
+      # The Rack application may also set "X-Accel-Buffering (yes|no)"
+      # in the response headers do disable/enable buffering on a
+      # per-response basis.
+      # proxy_buffering off;
+
+      proxy_pass http://app_server;
+    }
+
+    # Rails error pages
+    error_page 500 502 503 504 /500.html;
+    location = /500.html {
+      root /home/$USERNAME/$APP_NAME/current/public;
+    }
+  }
+}
+EOF
 }
 
 function configure_ntp() {
@@ -350,7 +451,7 @@ function create_user() {
     chown ${username}:${username} /home/${username}/.ssh/authorized_keys
     chmod 400 /home/${username}/.ssh/authorized_keys
   fi
-  
+
   if [ $SCREEN ]; then
     # use C-\ instead of C-a to avoid Emacs conflicts
     echo 'escape \034\034' > /home/${username}/.screenrc
@@ -384,7 +485,7 @@ function initialize() {
   if [ "$ECHO_COMMANDS" = 1 ]; then
       set -x
   fi
-  
+
   # Set default values
   MEMCACHED_RAM=${MEMCACHED_RAM:-0}
   THTTPD_PORT=${THTTPD_PORT:-0}
@@ -392,10 +493,10 @@ function initialize() {
 
 function update_sources_list() {
   cat >> /etc/apt/sources.list <<EOF
-deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ oneiric universe
-deb http://us.archive.ubuntu.com/ubuntu/ oneiric-updates universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ oneiric-updates universe
+deb http://us.archive.ubuntu.com/ubuntu/ precise universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ precise universe
+deb http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
+deb-src http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
 EOF
 }
 
@@ -408,37 +509,34 @@ function install_fail2ban() {
   if [ "$NOTIFICATION_EMAIL" ]; then
     sed -i -e "/^destemail/cdestemail = ${NOTIFICATION_EMAIL}" /etc/fail2ban/jail.local
   fi
-  
+
   /etc/init.d/fail2ban restart
 }
 
 function install_gems() {
-  if [ "$POSTGRES" = 1 ]; then
-    display_message "Installing pg gem"
-    gem install --no-rdoc --no-ri pg
-  fi  
-
-  if [ "$GEM_CREDITCARD" = 1 ]; then
-    display_message "Installing creditcard gem"
-    gem install --no-rdoc --no-ri creditcard
-  fi  
-
-  if [ "$GEM_JSON" = 1 ]; then
-    display_message "Installing json gem"
-    gem install --no-rdoc --no-ri json
-  fi  
-
-  if [ "$GEM_WILL_PAGINATE" = 1 ]; then
-    display_message "Installing will_paginate gem"
-    gem install --no-rdoc --no-ri will_paginate
-  fi  
+  if [ "$BUNDLER" = 1 ]; then
+    display_message "Installing bundler gem"
+    gem install --no-rdoc --no-ri bundler
+  fi
 }
 
-function install_passenger() {
-  display_message "Installing passenger"
-  gem install --no-rdoc --no-ri passenger
-  passenger-install-nginx-module --auto --auto-download --prefix=/usr/local/nginx
+function install_nginx() {
+  local nginx_src=$1
+
+  if [ $nginx_src ]; then
+    display_message "Installing nginx"
+    pushd /usr/local/src
+    wget $nginx_src
+    local fname=$(file_name_from_path $nginx_src)
+    tar xzf $fname
+    local prefix=${fname%\.tar\.gz}
+    cd $prefix
+    ./configure --with-http_ssl_module
+    make
+    make install
+    popd
   configure_nginx
+  fi
 }
 
 function install_postfix() {
@@ -449,7 +547,7 @@ function install_postfix() {
   sed -i -e "/^myhostname/cmyhostname = ${POSTFIX_DOMAIN}" /etc/postfix/main.cf
   sed -i -e "/^mydestination/cmydestination = localhost.localdomain, localhost" /etc/postfix/main.cf
   sed -i -e "/^inet_interfaces/cinet_interfaces = loopback-only" /etc/postfix/main.cf
-  
+
   if [ "$POSTFIX_NO_TLS" = 1 ]; then
       sed -i -e "/^smtpd_use_tls=yes/csmtpd_use_tls=no" /etc/postfix/main.cf
   fi
@@ -463,20 +561,10 @@ create role $USERNAME superuser login;
 EOF
 }
 
-function install_rails() {
-  local rails_version=$1
-
-  if [ $rails_version ]; then
-    display_message "Installing Rails ${rails_version} - this will take a while"
-    apt-get -y install libxslt-dev libxml2-dev  # needed by nokogiri
-    gem install --no-rdoc --no-ri -v ${rails_version} rails
-  fi
-}
-
 # install_ruby <ruby source url>
 function install_ruby() {
   local ruby_src=$1
-  
+
   if [ $ruby_src ]; then
     display_message "Installing Ruby"
     pushd /usr/local/src
@@ -550,7 +638,7 @@ EOF
 
 function install_tclink() {
   local tclink_src=$1
-  
+
   if [ $tclink_src ]; then
     pushd /usr/local/src
     display_message "Downloading tclink"
@@ -572,16 +660,16 @@ index 1443c15..890b09f 100644
 --- a/rb_tclink.c
 +++ b/rb_tclink.c
 @@ -48,8 +48,8 @@ tclink_send(VALUE obj, VALUE params) {
- 		input_key = rb_funcall(input_keys, rb_intern("[]"), 1,
+                input_key = rb_funcall(input_keys, rb_intern("[]"), 1,
                                         INT2FIX(i));
- 		input_value = rb_hash_aref(params, input_key);
+                input_value = rb_hash_aref(params, input_key);
 -		TCLinkPushParam(handle, RSTRING(StringValue(input_key))->ptr,
 -                                RSTRING(StringValue(input_value))->ptr);
 +		TCLinkPushParam(handle, RSTRING_PTR(StringValue(input_key)),
 +                                RSTRING_PTR(StringValue(input_value)));
- 	}
- 
- 	/* send the transaction */
+        }
+
+        /* send the transaction */
 diff --git a/tctest.rb b/tctest.rb
 index 27c640e..df7b6f2 100755
 --- a/tctest.rb
@@ -593,7 +681,7 @@ index 27c640e..df7b6f2 100755
 -  exit
 +  exit 1
  end
- 
+
  print "TCLink version " + TCLink.getVersion() + "\n"
 @@ -35,3 +35,5 @@ print "done!\n\nTransaction results:\n"
  for key in result.keys()
@@ -631,6 +719,140 @@ EOF
   popd
 }
 
+function install_unicorn() {
+  if [ "$UNICORN" = 1 ]; then
+    display_message "Installing unicorn"
+    gem install --no-rdoc --no-ri unicorn
+    mkdir /etc/unicorn
+    cat > /etc/unicorn/$APP_NAME.conf <<EOF
+# Config variables for Rails sites used by other init scripts such as
+# thinking-sphinx and unicorn
+
+USER=$USERNAME
+RAILS_ROOT=/home/$USERNAME/$APP_NAME/current
+RAILS_ENV=production
+
+# to prevent Gemfile not found issues, we explicitly set the Gemfile
+BUNDLE_GEMFILE=/home/$USERNAME/$APP_NAME/current/Gemfile
+EOF
+    cat > /etc/init.d/unicorn <<'EOF'
+#!/bin/sh
+#
+# init.d script for single or multiple unicorn installations. Expects at least one .conf
+# file in /etc/unicorn
+#
+# Modified by jay@gooby.org http://github.com/jaygooby
+# based on http://gist.github.com/308216 by http://github.com/mguterl
+#
+## A sample /etc/unicorn/my_app.conf
+##
+## RAILS_ENV=production
+## RAILS_ROOT=/var/apps/www/my_app/current
+#
+# This configures a unicorn master for your app at APP_ROOT/my_app/current running in
+# production mode. It will read config/unicorn.rb for further set up.
+#
+# You should ensure different ports or sockets are set in each config/unicorn.rb if
+# you are running more than one master concurrently.
+#
+# If you call this script without any config parameters, it will attempt to run the
+# init command for all your unicorn configurations listed in /etc/unicorn/*.conf
+#
+# /etc/init.d/unicorn start # starts all unicorns
+#
+# If you specify a particular config, it will only operate on that one
+#
+# /etc/init.d/unicorn start /etc/unicorn/my_app.conf
+
+set -e
+
+sig () {
+  sudo -u $USER sh -c "test -s \"$PID\" && kill -$1 `cat \"$PID\"`"
+}
+
+oldsig () {
+  sudo -u $USER sh -c "test -s \"$OLD_PID\" && kill -$1 `cat \"$OLD_PID\"`"
+}
+
+cmd () {
+
+  case $1 in
+    start)
+      sig 0 && echo >&2 "Already running" && exit 0
+      echo "Starting"
+      $CMD
+      ;;
+    stop)
+      sig QUIT && echo "Stopping" && exit 0
+      echo >&2 "Not running"
+      ;;
+    force-stop)
+      sig TERM && echo "Forcing a stop" && exit 0
+      echo >&2 "Not running"
+      ;;
+    restart|reload)
+      sig USR2 && sleep 5 && oldsig QUIT && echo "Killing old master" `cat $OLD_PID` && exit 0
+      echo >&2 "Couldn't reload, starting '$CMD' instead"
+      $CMD
+      ;;
+    upgrade)
+      sig USR2 && echo Upgraded && exit 0
+      echo >&2 "Couldn't upgrade, starting '$CMD' instead"
+      $CMD
+      ;;
+    rotate)
+            sig USR1 && echo rotated logs OK && exit 0
+            echo >&2 "Couldn't rotate logs" && exit 1
+            ;;
+    *)
+      echo >&2 "Usage: $0 <start|stop|restart|upgrade|rotate|force-stop>"
+      exit 1
+      ;;
+    esac
+}
+
+setup () {
+
+  echo -n "$RAILS_ROOT: "
+  cd $RAILS_ROOT || exit 1
+  export PID=$RAILS_ROOT/tmp/pids/unicorn.pid
+  export OLD_PID="$PID.oldbin"
+
+  CMD="sudo -u $USER bundle exec /usr/local/bin/unicorn_rails -c config/unicorn.rb -E $RAILS_ENV -D"
+}
+
+start_stop () {
+
+  # either run the start/stop/reload/etc command for every config under /etc/unicorn
+  # or just do it for a specific one
+
+  # $1 contains the start/stop/etc command
+  # $2 if it exists, should be the specific config we want to act on
+  if [ $2 ]; then
+    . $2
+    setup
+    cmd $1
+  else
+    for CONFIG in /etc/unicorn/*.conf; do
+      # import the variables
+      . $CONFIG
+      setup
+
+      # run the start/stop/etc command
+      cmd $1
+    done
+   fi
+}
+
+ARGS="$1 $2"
+start_stop $ARGS
+EOF
+  chmod 755 /etc/init.d/unicorn
+  display_message "Setting update-rc.d defaults for unicorn"
+  update-rc.d unicorn defaults
+  fi
+}
+
 function epilogue() {
   if [ "$SHOREWALL" = 1 ]; then
     cat <<EOF
@@ -641,7 +863,7 @@ EOF
 
   if [ "$RSSH" = 1 ]; then
       cat <<EOF
- 
+
 rssh config file is /etc/rssh.conf
 EOF
   fi
@@ -696,9 +918,9 @@ update_ubuntu
 apt_get_packages
 install_libyaml $LIBYAML_SOURCE
 install_ruby $RUBY_SOURCE
-install_rails $RAILS_VERSION
-install_passenger
 install_gems
+install_nginx $NGINX_SOURCE
+install_unicorn
 install_tclink $TCLINK_SOURCE
 configure_ntp
 epilogue
