@@ -821,7 +821,7 @@ setup () {
 
   echo -n "$RAILS_ROOT: "
   cd $RAILS_ROOT || exit 1
-  export PID=$RAILS_ROOT/tmp/pids/unicorn.pid
+  export PID=$RAILS_ROOT/log/unicorn.pid
   export OLD_PID="$PID.oldbin"
 
   CMD="sudo -u $USER bundle exec /usr/local/bin/unicorn_rails -c config/unicorn.rb -E $RAILS_ENV -D"
