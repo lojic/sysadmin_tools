@@ -79,7 +79,7 @@ LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
 MEMCACHED_RAM=16
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.2.2.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.2.7.tar.gz
 
 # To install Ruby, specify a url for source
 RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p125.tar.gz
