@@ -654,18 +654,16 @@ function install_tclink() {
     #   RSTRING(...)->ptr now needs to be RSTRING_PTR(...) in Ruby 1.9.2
     # tctest.rb is patched to return a non-zero return code on error
     #   so that the script will abort
-    cat > patch.txt <<EOF
-diff --git a/rb_tclink.c b/rb_tclink.c
-index 1443c15..890b09f 100644
---- a/rb_tclink.c
-+++ b/rb_tclink.c
-@@ -48,8 +48,8 @@ tclink_send(VALUE obj, VALUE params) {
+    cat > rb_tclink.c.patch <<EOF
+--- rb_tclink.c 2007-07-13 15:07:20.000000000 -0400
++++ after.c     2013-01-08 15:07:48.000000000 -0500
+@@ -48,8 +48,8 @@
                 input_key = rb_funcall(input_keys, rb_intern("[]"), 1,
                                         INT2FIX(i));
                 input_value = rb_hash_aref(params, input_key);
--		TCLinkPushParam(handle, RSTRING(StringValue(input_key))->ptr,
+-               TCLinkPushParam(handle, RSTRING(StringValue(input_key))->ptr,
 -                                RSTRING(StringValue(input_value))->ptr);
-+		TCLinkPushParam(handle, RSTRING_PTR(StringValue(input_key)),
++               TCLinkPushParam(handle, RSTRING_PTR(StringValue(input_key)),
 +                                RSTRING_PTR(StringValue(input_value)));
         }
 
@@ -690,7 +688,15 @@ index 27c640e..df7b6f2 100755
 +
 +exit 1 unless result['status'] == 'approved'
 EOF
-    patch <patch.txt
+
+    patch rb_tclink.c rb_tclink.patch
+
+    cat > tctest.rb.patch <<EOF
+
+EOF
+
+    patch tctest.rb tctest.rb.patch
+
     display_message "Building tclink"
     ./build.sh
     display_message "Copying to Ruby extensions directory"
