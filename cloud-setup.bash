@@ -322,11 +322,11 @@ http {
   include       mime.types;
   default_type  application/octet-stream;
 
-  log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent" "$http_x_forwarded_for"';
+  log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                    '\$status \$body_bytes_sent "\$http_referer" '
+                    '"\$http_user_agent" "\$http_x_forwarded_for"';
 
-  log_format post_data '$remote_addr - $request_body';
+  log_format post_data '\$remote_addr - \$request_body';
 
   client_max_body_size 30M;
 
