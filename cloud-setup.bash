@@ -462,6 +462,12 @@ if [ "$TERM" != "screen"  ]; then
 fi
 EOF
   fi
+
+  # Set RAILS_ENV
+  cat >> /home/${username}/.bashrc <<'EOF'
+RAILS_ENV=production
+export RAILS_ENV
+EOF
 }
 
 function display_message() {
