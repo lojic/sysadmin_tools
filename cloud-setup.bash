@@ -654,55 +654,6 @@ function install_tclink() {
     tar xzf $fname
     local prefix=${fname%\.tar\.gz}
     cd $prefix
-    display_message "Patching tclink"
-    # Patch rb_tclink.c & tctest.rb
-    # rb_tclink.c needs to be patched because
-    #   RSTRING(...)->ptr now needs to be RSTRING_PTR(...) in Ruby 1.9.2
-    # tctest.rb is patched to return a non-zero return code on error
-    #   so that the script will abort
-    cat > rb_tclink.c.patch <<EOF
---- rb_tclink.c 2007-07-13 15:07:20.000000000 -0400
-+++ after.c     2013-01-08 15:07:48.000000000 -0500
-@@ -48,8 +48,8 @@
-                input_key = rb_funcall(input_keys, rb_intern("[]"), 1,
-                                        INT2FIX(i));
-                input_value = rb_hash_aref(params, input_key);
--               TCLinkPushParam(handle, RSTRING(StringValue(input_key))->ptr,
--                                RSTRING(StringValue(input_value))->ptr);
-+               TCLinkPushParam(handle, RSTRING_PTR(StringValue(input_key)),
-+                                RSTRING_PTR(StringValue(input_value)));
-        }
-
-        /* send the transaction */
-diff --git a/tctest.rb b/tctest.rb
-index 27c640e..df7b6f2 100755
---- a/tctest.rb
-+++ b/tctest.rb
-@@ -8,7 +8,7 @@ begin
-   require 'tclink'
- rescue LoadError
-   print "Failed to load TCLink extension\n"
--  exit
-+  exit 1
- end
-
- print "TCLink version " + TCLink.getVersion() + "\n"
-@@ -35,3 +35,5 @@ print "done!\n\nTransaction results:\n"
- for key in result.keys()
-   print "\t" + key + "=" + result[key] + "\n"
- end
-+
-+exit 1 unless result['status'] == 'approved'
-EOF
-
-    patch rb_tclink.c rb_tclink.patch
-
-    cat > tctest.rb.patch <<EOF
-
-EOF
-
-    patch tctest.rb tctest.rb.patch
-
     display_message "Building tclink"
     ./build.sh
     display_message "Copying to Ruby extensions directory"
