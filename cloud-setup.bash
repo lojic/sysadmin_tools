@@ -61,7 +61,6 @@ ECHO_COMMANDS=0          # Echo commands from script
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
 GHC=0                    # Install Glasgow Haskell Compiler via apt-get
-MLTON=0                  # Install MLton Standard ML Compiler via apt-get
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
@@ -186,11 +185,6 @@ function apt_get_packages() {
 
   if [ "$THTTPD_PORT" -gt 0 ]; then
     install_thttpd
-  fi
-
-  if [ "$MLTON" = 1 ]; then
-    display_message "Installing mlton"
-    apt-get -y install mlton
   fi
 
   if [ "$FAIL2BAN" = 1 ]; then
