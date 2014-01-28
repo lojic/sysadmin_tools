@@ -79,13 +79,13 @@ LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
 MEMCACHED_RAM=16
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.2.7.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.4.2.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p125.tar.gz
+RUBY_SOURCE=http://xyz.lcs.mit.edu/ruby/ruby-2.0.0-p247.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
-TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-3.4.4-ruby.tar.gz
+TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
 
 # To install thttpd, specify a port > 0 e.g. 8000
 THTTPD_PORT=0
