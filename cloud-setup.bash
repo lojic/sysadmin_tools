@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This Bash script sets up a new Ubuntu 12.04 LTS (Precise Pangolin) web server.
+# This Bash script sets up a new Ubuntu 14.04 LTS (Trusty Tahr) web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
 # ********
@@ -81,7 +81,7 @@ MEMCACHED_RAM=16
 NGINX_SOURCE=http://nginx.org/download/nginx-1.4.2.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://xyz.lcs.mit.edu/ruby/ruby-2.0.0-p247.tar.gz
+RUBY_SOURCE=http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.1.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
@@ -492,6 +492,7 @@ function initialize() {
 }
 
 function update_sources_list() {
+  display_message 'Updating sources list:'
   cat >> /etc/apt/sources.list <<EOF
 deb http://us.archive.ubuntu.com/ubuntu/ precise universe
 deb-src http://us.archive.ubuntu.com/ubuntu/ precise universe
@@ -573,6 +574,60 @@ function install_ruby() {
     tar xzf $fname
     local prefix=${fname%\.tar\.gz}
     cd $prefix
+    # Ruby 2.1.1 needs to be patched on Ubuntu 14.04 due to a bug in readline.c
+    cat >> readline.patch <<'EOF'
+Index: ext/readline/readline.c
+===================================================================
+--- ext/readline/readline.c	(revision 45224)
++++ ext/readline/readline.c	(revision 45225)
+@@ -1974,7 +1974,7 @@
+
+     rl_attempted_completion_function = readline_attempted_completion_function;
+ #if defined(HAVE_RL_PRE_INPUT_HOOK)
+-    rl_pre_input_hook = (Function *)readline_pre_input_hook;
++    rl_pre_input_hook = (rl_hook_func_t *)readline_pre_input_hook;
+ #endif
+ #ifdef HAVE_RL_CATCH_SIGNALS
+     rl_catch_signals = 0;
+Index: ext/readline/extconf.rb
+===================================================================
+--- ext/readline/extconf.rb	(revision 45239)
++++ ext/readline/extconf.rb	(revision 45240)
+@@ -19,6 +19,10 @@
+   return super(func, headers)
+ end
+
++def readline.have_type(type)
++  return super(type, headers)
++end
++
+ dir_config('curses')
+ dir_config('ncurses')
+ dir_config('termcap')
+@@ -94,4 +98,8 @@
+ readline.have_func("rl_redisplay")
+ readline.have_func("rl_insert_text")
+ readline.have_func("rl_delete_text")
++unless readline.have_type("rl_hook_func_t")
++  $DEFS << "-Drl_hook_func_t=Function"
++end
++
+ create_makefile("readline")
+Index: ext/readline/extconf.rb
+===================================================================
+--- ext/readline/extconf.rb	(revision 45242)
++++ ext/readline/extconf.rb	(revision 45243)
+@@ -99,6 +99,9 @@
+ readline.have_func("rl_insert_text")
+ readline.have_func("rl_delete_text")
+ unless readline.have_type("rl_hook_func_t")
++  # rl_hook_func_t is available since readline-4.2 (2001).
++  # Function is removed at readline-6.3 (2014).
++  # However, editline (NetBSD 6.1.3, 2014) doesn't have rl_hook_func_t.
+   $DEFS << "-Drl_hook_func_t=Function"
+ end
+EOF
+    patch -p0 <readline.patch
     ./configure
     make
     make install
@@ -651,7 +706,7 @@ function install_tclink() {
     display_message "Building tclink"
     ./build.sh
     display_message "Copying to Ruby extensions directory"
-    cp tclink.so /usr/local/lib/ruby/1.9.1/x86_64-linux/
+    cp tclink.so /usr/local/lib/ruby/2.1.0/x86_64-linux/
     display_message "Testing tclink"
     ruby tctest.rb
     popd
@@ -840,6 +895,7 @@ EOF
 # Prevent root login
 # Prevent password login
 function secure_ssh() {
+  display_message 'Securing ssh:'
   cp /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
 
   # Ensure root can't ssh in
@@ -851,7 +907,7 @@ function secure_ssh() {
   fi
 
   # Restart sshd
-  /etc/init.d/ssh restart
+  service ssh restart
 }
 
 function update_ubuntu() {
@@ -864,20 +920,34 @@ function update_ubuntu() {
 # Main
 #------------------------------------------------------------
 
+display_message 'Begin cloud-setup.bash:'
 initialize
+display_message 'initialize complete:'
 update_sources_list
+display_message 'update_sources_list complete:'
 configure_timezone $TIMEZONE
 display_message 'Changing root password:'
 passwd # Change root passwd
 create_user $USERNAME $PUBLIC_KEY_URL
+display_message 'user created:'
 secure_ssh
+display_message 'ssh secured:'
 update_ubuntu
+display_message 'ubuntu updated:'
 apt_get_packages
+display_message 'apt-get packages installed:'
 install_libyaml $LIBYAML_SOURCE
+display_message 'libyaml installed:'
 install_ruby $RUBY_SOURCE
+display_message 'ruby installed:'
 install_gems
+display_message 'gems installed:'
 install_nginx $NGINX_SOURCE
+display_message 'nginx installed:'
 install_unicorn
+display_message 'unicorn installed:'
 install_tclink $TCLINK_SOURCE
+display_message 'tclink installed:'
 configure_ntp
+display_message 'ntp configured:'
 epilogue
