@@ -72,13 +72,13 @@ UNICORN=1                # Install Unicorn
 export DEBIAN_FRONTEND=noninteractive
 
 # To install libyaml, specify a url for source
-LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.4.tar.gz
+LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.5.tar.gz
 
 # To install memcached, specify a RAM amount > 0 e.g. 16
 MEMCACHED_RAM=16
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.4.2.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.6.0.tar.gz
 
 # To install Ruby, specify a url for source
 RUBY_SOURCE=http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.1.tar.gz
