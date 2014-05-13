@@ -939,6 +939,7 @@ display_message 'apt-get packages installed:'
 install_libyaml $LIBYAML_SOURCE
 display_message 'libyaml installed:'
 install_ruby $RUBY_SOURCE
+hash -r  # start using the new Ruby
 display_message 'ruby installed:'
 install_gems
 display_message 'gems installed:'
