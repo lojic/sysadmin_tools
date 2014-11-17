@@ -72,16 +72,16 @@ UNICORN=1                # Install Unicorn
 export DEBIAN_FRONTEND=noninteractive
 
 # To install libyaml, specify a url for source
-LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.5.tar.gz
+LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
 
 # To install memcached, specify a RAM amount > 0 e.g. 16
 MEMCACHED_RAM=16
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.6.0.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.6.2.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.1.tar.gz
+RUBY_SOURCE=http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.5.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
@@ -104,7 +104,7 @@ function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
              libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev \
-             libxslt-dev
+             libxslt-dev vim
 }
 
 function install_libyaml() {
@@ -574,60 +574,6 @@ function install_ruby() {
     tar xzf $fname
     local prefix=${fname%\.tar\.gz}
     cd $prefix
-    # Ruby 2.1.1 needs to be patched on Ubuntu 14.04 due to a bug in readline.c
-    cat >> readline.patch <<'EOF'
-Index: ext/readline/readline.c
-===================================================================
---- ext/readline/readline.c	(revision 45224)
-+++ ext/readline/readline.c	(revision 45225)
-@@ -1974,7 +1974,7 @@
-
-     rl_attempted_completion_function = readline_attempted_completion_function;
- #if defined(HAVE_RL_PRE_INPUT_HOOK)
--    rl_pre_input_hook = (Function *)readline_pre_input_hook;
-+    rl_pre_input_hook = (rl_hook_func_t *)readline_pre_input_hook;
- #endif
- #ifdef HAVE_RL_CATCH_SIGNALS
-     rl_catch_signals = 0;
-Index: ext/readline/extconf.rb
-===================================================================
---- ext/readline/extconf.rb	(revision 45239)
-+++ ext/readline/extconf.rb	(revision 45240)
-@@ -19,6 +19,10 @@
-   return super(func, headers)
- end
-
-+def readline.have_type(type)
-+  return super(type, headers)
-+end
-+
- dir_config('curses')
- dir_config('ncurses')
- dir_config('termcap')
-@@ -94,4 +98,8 @@
- readline.have_func("rl_redisplay")
- readline.have_func("rl_insert_text")
- readline.have_func("rl_delete_text")
-+unless readline.have_type("rl_hook_func_t")
-+  $DEFS << "-Drl_hook_func_t=Function"
-+end
-+
- create_makefile("readline")
-Index: ext/readline/extconf.rb
-===================================================================
---- ext/readline/extconf.rb	(revision 45242)
-+++ ext/readline/extconf.rb	(revision 45243)
-@@ -99,6 +99,9 @@
- readline.have_func("rl_insert_text")
- readline.have_func("rl_delete_text")
- unless readline.have_type("rl_hook_func_t")
-+  # rl_hook_func_t is available since readline-4.2 (2001).
-+  # Function is removed at readline-6.3 (2014).
-+  # However, editline (NetBSD 6.1.3, 2014) doesn't have rl_hook_func_t.
-   $DEFS << "-Drl_hook_func_t=Function"
- end
-EOF
-    patch -p0 <readline.patch
     ./configure
     make
     make install
