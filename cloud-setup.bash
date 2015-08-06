@@ -78,10 +78,10 @@ LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
 MEMCACHED_RAM=16
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.6.2.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.8.0.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.5.tar.gz
+RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.2.tar.gz
 
 # To install Trust Commerce's tclink API, specify a url for source
 TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
@@ -556,7 +556,7 @@ function install_postfix() {
 
 function install_postgres() {
   display_message "Installing postgresql"
-  apt-get -y install libecpg-dev postgresql
+  apt-get -y install libecpg-dev postgresql postgresql-contrib
   su -c psql postgres <<EOF
 create role $USERNAME superuser login;
 EOF
