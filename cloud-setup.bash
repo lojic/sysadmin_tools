@@ -6,7 +6,7 @@
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2014 by Brian J. Adkins
+# Copyright (C) 2011-2015 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,6 @@
 #  update-locale LANG=en_US.UTF-8
 #  And then logout/login to "set" the locale. I tried source .bashrc to no avail
 
-
 #------------------------------------------------------------
 # Modify values below here
 #------------------------------------------------------------
@@ -55,36 +54,39 @@ POSTFIX_NO_TLS=1   # Don't use tls
 PUBLIC_KEY_URL=
 
 # Boolean flags 1 => true, 0 => false
-BUNDLER=1                # Install bundler gem
+BUNDLER=0                # Install bundler gem
 CHKROOTKIT=1             # Install chkrootkit root kit checker via apt-get
 ECHO_COMMANDS=0          # Echo commands from script
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
-GHC=0                    # Install Glasgow Haskell Compiler via apt-get
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=1              # Install shorewall firewall via apt-get
-UNICORN=1                # Install Unicorn
+UNICORN=0                # Install Unicorn
 
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
 
 # To install libyaml, specify a url for source
-LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
+#LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
+LIBYAML_SOURCE=
 
 # To install memcached, specify a RAM amount > 0 e.g. 16
-MEMCACHED_RAM=16
+#MEMCACHED_RAM=16
+MEMCACHED_RAM=0
 
 # To install nginx, specify a url for source
 NGINX_SOURCE=http://nginx.org/download/nginx-1.8.0.tar.gz
 
 # To install Ruby, specify a url for source
-RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.2.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.4.tar.gz
+RUBY_SOURCE=
 
 # To install Trust Commerce's tclink API, specify a url for source
-TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
+#TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
+TCLINK_SOURCE=
 
 # To install thttpd, specify a port > 0 e.g. 8000
 THTTPD_PORT=0
