@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This Bash script sets up a new Ubuntu 14.04 LTS (Trusty Tahr) web server.
+# This Bash script sets up a new Ubuntu 16.04 LTS (Xenial Xerus) web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2015 by Brian J. Adkins
+# Copyright (C) 2011-2016 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@
 #  **********
 #
 #  Before running this script, execute the following command to set the locale:
-#  update-locale LANG=en_US.UTF-8
+#  sudo update-locale LANG=en_US.UTF-8
 #  And then logout/login to "set" the locale. I tried source .bashrc to no avail
 
 #------------------------------------------------------------
@@ -78,10 +78,10 @@ LIBYAML_SOURCE=
 MEMCACHED_RAM=0
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.8.0.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.10.0.tar.gz
 
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.4.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.1.tar.gz
 RUBY_SOURCE=
 
 # To install Trust Commerce's tclink API, specify a url for source
