@@ -6,7 +6,7 @@
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2016 by Brian J. Adkins
+# Copyright (C) 2011-2017 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -57,8 +57,10 @@ PUBLIC_KEY_URL=
 BUNDLER=0                # Install bundler gem
 CHKROOTKIT=1             # Install chkrootkit root kit checker via apt-get
 ECHO_COMMANDS=0          # Echo commands from script
+ELASTICSEARCH=0          # Install Elasticsearch
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
+JAVA=0                   # Install Java JRE
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
@@ -69,6 +71,8 @@ UNICORN=0                # Install Unicorn
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
 
+#ELASTICSEARCH_SOURCE=https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.3.2/elasticsearch-2.3.2.tar.gz
+
 # To install libyaml, specify a url for source
 #LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
 LIBYAML_SOURCE=
@@ -78,10 +82,10 @@ LIBYAML_SOURCE=
 MEMCACHED_RAM=0
 
 # To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.10.0.tar.gz
+NGINX_SOURCE=http://nginx.org/download/nginx-1.11.8.tar.gz
 
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.1.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.0.tar.gz
 RUBY_SOURCE=
 
 # To install Trust Commerce's tclink API, specify a url for source
@@ -106,7 +110,7 @@ function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
              libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev \
-             libxslt-dev vim
+             libxslt-dev vim dos2unix
 }
 
 function install_libyaml() {
@@ -167,7 +171,12 @@ function apt_get_packages() {
 
   if [ "$EMACS" = 1 ]; then
     display_message "Installing emacs"
-    apt-get -y install emacs23-nox
+    apt-get -y install emacs24-nox
+  fi
+
+  if [ "$JAVA" = 1 ]; then
+    display_message "Installing Java"
+    apt-get -y install openjdk-9-jre-headless
   fi
 
   if [ "$SCREEN" = 1 ]; then
@@ -491,6 +500,11 @@ function initialize() {
   # Set default values
   MEMCACHED_RAM=${MEMCACHED_RAM:-0}
   THTTPD_PORT=${THTTPD_PORT:-0}
+
+  # Elasticsearch requires Java
+  if [ "$ELASTICSEARCH" = 1 ]; then
+    JAVA=1
+  fi
 }
 
 function update_sources_list() {
@@ -539,6 +553,16 @@ function install_nginx() {
     make install
     popd
   configure_nginx
+  fi
+}
+
+function install_elasticsearch() {
+  if [ "$ELASTICSEARCH" = 1 ]; then
+      # Download and install the Public Signing Key      
+      wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+      echo "deb https://packages.elastic.co/elasticsearch/2.x/debian stable main" | tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list
+      apt-get update && apt-get -y install elasticsearch
+      update-rc.d elasticsearch defaults 95 10
   fi
 }
 
@@ -884,6 +908,7 @@ update_ubuntu
 display_message 'ubuntu updated:'
 apt_get_packages
 display_message 'apt-get packages installed:'
+install_elasticsearch $ELASTICSEARCH_SOURCE
 install_libyaml $LIBYAML_SOURCE
 display_message 'libyaml installed:'
 install_ruby $RUBY_SOURCE
