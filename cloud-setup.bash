@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# TODO
+# sudo apt-get install libecpg-dev (if postgres not installed, but rails is)
+# sudo apt-get install nodejs (if rails is installed - for execjs)
+# build ruby without rdoc and ri
+
+
 # This Bash script sets up a new Ubuntu 16.04 LTS (Xenial Xerus) web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
@@ -61,6 +67,7 @@ ELASTICSEARCH=0          # Install Elasticsearch
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
 JAVA=0                   # Install Java JRE
+NGINX=1                  # Install nginx
 POSTGRES=1               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
@@ -81,11 +88,8 @@ LIBYAML_SOURCE=
 #MEMCACHED_RAM=16
 MEMCACHED_RAM=0
 
-# To install nginx, specify a url for source
-NGINX_SOURCE=http://nginx.org/download/nginx-1.11.8.tar.gz
-
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.0.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.3.tar.gz
 RUBY_SOURCE=
 
 # To install Trust Commerce's tclink API, specify a url for source
@@ -190,6 +194,10 @@ function apt_get_packages() {
     sed -i.orig -e "/^-m 64/c-m ${MEMCACHED_RAM}" /etc/memcached.conf
   fi
 
+  if [ "$NGINX" = 1 ]; then
+      install_nginx
+  fi
+
   if [ "$POSTGRES" = 1 ]; then
     install_postgres
   fi
@@ -237,145 +245,83 @@ EOF
 }
 
 function configure_nginx() {
-  cat > /etc/init.d/nginx <<'EOF'
-# Description: Startup script for nginx webserver on Debian. Place in /etc/init.d and
-# run 'sudo update-rc.d nginx defaults', or use the appropriate command on your
-# distro.
-#
-# Author:       Ryan Norbauer <ryan.norbauer@gmail.com>
-# Modified:     Geoffrey Grosenbach http://topfunky.com
-
-set -e
-
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DESC="nginx daemon"
-NAME=nginx
-DAEMON=/usr/local/nginx/sbin/$NAME
-CONFIGFILE=/usr/local/nginx/conf/nginx.conf
-#PIDFILE=/var/run/$NAME.pid
-PIDFILE=/usr/local/nginx/logs/$NAME.pid
-SCRIPTNAME=/etc/init.d/$NAME
-
-# Gracefully exit if the package has been removed.
-test -x $DAEMON || exit 0
-
-d_start() {
-  $DAEMON -c $CONFIGFILE || echo -n " already running"
-}
-
-d_stop() {
-  kill -QUIT `cat $PIDFILE` || echo -n " not running"
-}
-
-d_reload() {
-  kill -HUP `cat $PIDFILE` || echo -n " can't reload"
-}
-
-case "$1" in
-  start)
-        echo -n "Starting $DESC: $NAME"
-        d_start
-        echo "."
-        ;;
-  stop)
-        echo -n "Stopping $DESC: $NAME"
-        d_stop
-        echo "."
-        ;;
-  reload)
-echo -n "Reloading $DESC configuration..."
-d_reload
-        echo "reloaded."
-  ;;
-  restart)
-        echo -n "Restarting $DESC: $NAME"
-        d_stop
-        # One second might not be time enough for a daemon to stop,
-        # if this happens, d_start will fail (and dpkg will break if
-        # the package is being upgraded). Change the timeout if needed
-        # be, or change d_stop to have start-stop-daemon use --retry.
-        # Notice that using --retry slows down the shutdown process somewhat.
-        sleep 1
-        d_start
-        echo "."
-        ;;
-  *)
-          echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
-          exit 3
-        ;;
-esac
-
-exit 0
-EOF
-  chmod 755 /etc/init.d/nginx
-  display_message "Setting update-rc.d defaults for nginx"
-  update-rc.d nginx defaults
-  cp /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/orig.nginx.conf
-  cat > /usr/local/nginx/conf/nginx.conf <<EOF
-#user  nobody;
-worker_processes  4;
-#error_log  logs/error.log;
-#error_log  logs/error.log  notice;
-#error_log  logs/error.log  info;
-pid        logs/nginx.pid;
+  rm /etc/nginx/sites-enabled/default
+  cp /etc/nginx/nginx.conf /etc/nginx/orig.nginx.conf
+  cat > /etc/nginx/nginx.conf <<EOF
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
 
 events {
-    worker_connections  1024;
+  worker_connections 768;
+  # multi_accept on;
 }
 
 http {
-  include       mime.types;
-  default_type  application/octet-stream;
+  ##
+  # Basic Settings
+  ##
 
-  log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
-                    '\$status \$body_bytes_sent "\$http_referer" '
-                    '"\$http_user_agent" "\$http_x_forwarded_for"';
+  sendfile on;
+  tcp_nopush on;
+  tcp_nodelay on;
+  keepalive_timeout 65;
+  types_hash_max_size 2048;
+  # server_tokens off;
 
-  log_format post_data '\$remote_addr - \$request_body';
+  # server_names_hash_bucket_size 64;
+  # server_name_in_redirect off;
 
-  client_max_body_size 30M;
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
 
-  access_log  logs/access.log  main;
+  ##
+  # SSL Settings
+  ##
 
-  sendfile        on;
-  #tcp_nopush     on;
-  #keepalive_timeout  0;
-  keepalive_timeout  65;
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # Dropping SSLv3, ref: POODLE
+  ssl_prefer_server_ciphers on;
 
-  gzip  on;
-  gzip_proxied any;
-  gzip_types application/xml text/xml;
+  ##
+  # Logging Settings
+  ##
 
-  upstream app_server {
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log;
+
+  ##
+  # Gzip Settings
+  ##
+
+  gzip on;
+  gzip_disable "msie6";
+
+  # gzip_vary on;
+  # gzip_proxied any;
+  # gzip_comp_level 6;
+  # gzip_buffers 16 8k;
+  # gzip_http_version 1.1;
+  # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+  upstream rails {
     server localhost:4311;
   }
 
   server {
-    server_name  www.$APP_DOMAIN;
+    server_name www.$APP_DOMAIN;
     rewrite ^(.*) http://$APP_DOMAIN\$1 permanent;
   }
 
   server {
     client_max_body_size 30M;
-    listen       80;
-    server_name  $APP_DOMAIN;
+    listen 80;
+    server_name $APP_DOMAIN;
+
     root /home/$USERNAME/$APP_NAME/current/public;
 
-    # rewrite for maintenance
-    if (-f \$document_root/system/maintenance.html) {
-      rewrite  ^(.*)\$  /maintenance.html break;
-    }
-
-    # Prefer to serve static files directly from nginx to avoid unnecessary
-    # data copies from the application server.
-    #
-    # try_files directive appeared in in nginx 0.7.27 and has stabilized
-    # over time.  Older versions of nginx (e.g. 0.6.x) requires
-    # "if (!-f \$request_filename)" which was less efficient:
-    # http://bogomips.org/unicorn.git/tree/examples/nginx.conf?id=v3.3.1#n127
     try_files \$uri/index.html \$uri.html \$uri @app;
 
-    location @app {
+    location @rails {
       # an HTTP header important enough to have its own Wikipedia entry:
       #   http://en.wikipedia.org/wiki/X-Forwarded-For
       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -404,7 +350,7 @@ http {
       # per-response basis.
       # proxy_buffering off;
 
-      proxy_pass http://app_server;
+      proxy_pass http://rails;
     }
 
     # Rails error pages
@@ -414,6 +360,28 @@ http {
     }
   }
 }
+
+#mail {
+#       # See sample authentication script at:
+#       # http://wiki.nginx.org/ImapAuthenticateWithApachePhpScript
+#
+#       # auth_http localhost/auth.php;
+#       # pop3_capabilities "TOP" "USER";
+#       # imap_capabilities "IMAP4rev1" "UIDPLUS";
+#
+#       server {
+#               listen     localhost:110;
+#               protocol   pop3;
+#               proxy      on;
+#       }
+#
+#       server {
+#               listen     localhost:143;
+#               protocol   imap;
+#               proxy      on;
+#       }
+#}
+
 EOF
 }
 
@@ -538,27 +506,15 @@ function install_gems() {
 }
 
 function install_nginx() {
-  local nginx_src=$1
-
-  if [ $nginx_src ]; then
-    display_message "Installing nginx"
-    pushd /usr/local/src
-    wget $nginx_src
-    local fname=$(file_name_from_path $nginx_src)
-    tar xzf $fname
-    local prefix=${fname%\.tar\.gz}
-    cd $prefix
-    ./configure --with-http_ssl_module
-    make
-    make install
-    popd
+  display_message "Installing nginx"
+  apt-get -y install nginx
   configure_nginx
-  fi
+  configure_logrotate
 }
 
 function install_elasticsearch() {
   if [ "$ELASTICSEARCH" = 1 ]; then
-      # Download and install the Public Signing Key      
+      # Download and install the Public Signing Key
       wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
       echo "deb https://packages.elastic.co/elasticsearch/2.x/debian stable main" | tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list
       apt-get update && apt-get -y install elasticsearch
@@ -916,8 +872,6 @@ hash -r  # start using the new Ruby
 display_message 'ruby installed:'
 install_gems
 display_message 'gems installed:'
-install_nginx $NGINX_SOURCE
-display_message 'nginx installed:'
 install_unicorn
 display_message 'unicorn installed:'
 install_tclink $TCLINK_SOURCE
