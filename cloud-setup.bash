@@ -68,12 +68,12 @@ EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
 JAVA=0                   # Install Java JRE
 NGINX=1                  # Install nginx
-POSTGRES=1               # Install Postgres database via apt-get
+POSTGRES=0               # Install Postgres database via apt-get
 RKHUNTER=1               # Install rkhunter root kit checker via apt-get
 RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
-SHOREWALL=1              # Install shorewall firewall via apt-get
-UNICORN=0                # Install Unicorn
+SHOREWALL=0              # Install shorewall firewall via apt-get
+UNICORN=1                # Install Unicorn
 
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
@@ -89,7 +89,7 @@ LIBYAML_SOURCE=
 MEMCACHED_RAM=0
 
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.3.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.1.tar.gz
 RUBY_SOURCE=
 
 # To install Trust Commerce's tclink API, specify a url for source
@@ -381,7 +381,6 @@ http {
 #               proxy      on;
 #       }
 #}
-
 EOF
 }
 
