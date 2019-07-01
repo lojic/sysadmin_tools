@@ -123,9 +123,9 @@ function install_racket() {
   if [ "$RACKET" = 1 ]; then
     display_message "Installing Racket"
     pushd /usr/local/src
-    wget https://mirror.racket-lang.org/installers/7.1/racket-7.1-src-builtpkgs.tgz
-    tar xzf racket-7.1-src-builtpkgs.tgz
-    cd racket-7.1/src
+    wget https://mirror.racket-lang.org/installers/7.3/racket-7.3-src-builtpkgs.tgz
+    tar xzf racket-7.3-src-builtpkgs.tgz
+    cd racket-7.3/src
     mkdir build
     cd build
     ../configure
