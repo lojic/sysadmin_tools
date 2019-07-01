@@ -1,18 +1,41 @@
 #!/bin/bash
 
+# ***************************************
+# *                                     *
+# *  NOTE: Before running this script:  *
+# *                                     *
+# ***************************************
+
+# 1) sudo update-locale LANG=en_US.UTF-8 # then logout/login
+
+# 2) Setup swap space with the following command:
+#    sudo dd if=/dev/zero of=/var/swapfile bs=1M count=2048 && sudo chmod 600 /var/swapfile && sudo mkswap /var/swapfile && echo /var/swapfile none swap defaults 0 0 | sudo tee -a /etc/fstab && sudo swapon -a
+
+# 3) If not installing postgres locally, install psql client-side packages:
+#    sudo apt-get install libecpg-dev postgresql-client-common postgresql-client
+
+# 4) If Rails is installed (for execjs)
+#    sudo apt-get install nodejs
+
+# 5) Set the following values
+#    APP_NAME
+#    APP_DOMAIN
+#    POSTFIX_DOMAIN  (if you want to send mail)
+#    PUBLIC_KEY_URL
+
 # TODO
-# sudo apt-get install libecpg-dev (if postgres not installed, but rails is)
-# sudo apt-get install nodejs (if rails is installed - for execjs)
 # build ruby without rdoc and ri
+# I think the following is unnecessary because the script should set the TZ
+# sudo dpkg-reconfigure tzdata   then choose US eastern
 
 
-# This Bash script sets up a new Ubuntu 16.04 LTS (Xenial Xerus) web server.
+# This Bash script sets up a new Ubuntu 18.04 (Bionic Beaver) LTS web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2017 by Brian J. Adkins
+# Copyright (C) 2011-2018 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,15 +54,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
-
-#  **********
-#  *  NOTE  *
-#  **********
-#
-#  Before running this script, execute the following command to set the locale:
-#  sudo update-locale LANG=en_US.UTF-8
-#  And then logout/login to "set" the locale. I tried source .bashrc to no avail
 
 #------------------------------------------------------------
 # Modify values below here
@@ -69,32 +83,24 @@ FAIL2BAN=1               # Install fail2ban via apt-get
 JAVA=0                   # Install Java JRE
 NGINX=1                  # Install nginx
 POSTGRES=0               # Install Postgres database via apt-get
-RKHUNTER=1               # Install rkhunter root kit checker via apt-get
+RACKET=1                 # Install Racket
 RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=0              # Install shorewall firewall via apt-get
-UNICORN=1                # Install Unicorn
+UNICORN=0                # Install Unicorn
 
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
 
 #ELASTICSEARCH_SOURCE=https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.3.2/elasticsearch-2.3.2.tar.gz
 
-# To install libyaml, specify a url for source
-#LIBYAML_SOURCE=http://pyyaml.org/download/libyaml/yaml-0.1.6.tar.gz
-LIBYAML_SOURCE=
-
 # To install memcached, specify a RAM amount > 0 e.g. 16
 #MEMCACHED_RAM=16
 MEMCACHED_RAM=0
 
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.1.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.4.tar.gz
 RUBY_SOURCE=
-
-# To install Trust Commerce's tclink API, specify a url for source
-#TCLINK_SOURCE=https://vault.trustcommerce.com/downloads/tclink-4.0.1-ruby.tar.gz
-TCLINK_SOURCE=
 
 # To install thttpd, specify a port > 0 e.g. 8000
 THTTPD_PORT=0
@@ -110,29 +116,29 @@ WWW_DIR=/var/www
 # Functions
 #------------------------------------------------------------
 
+function install_racket() {
+  if [ "$RACKET" = 1 ]; then
+    display_message "Installing Racket"
+    pushd /usr/local/src
+    wget https://mirror.racket-lang.org/installers/7.1/racket-7.1-src-builtpkgs.tgz
+    local fname=$(file_name_from_path $racket_src)
+    tar xzf $fname
+    cd racket-7.1/src
+    mkdir build
+    cd build
+    ../configure
+    make
+    make install
+    ln -s /usr/local/src/racket-7.1/bin/racket /usr/local/bin/racket
+    popd
+  fi
+}
+
 function apt_get_packages_common() {
   display_message "Installing common packages"
   apt-get -y install build-essential dnsutils git-core imagemagick libpcre3-dev \
              libreadline6-dev libssl-dev libxml2-dev locate rsync zlib1g-dev \
              libxslt-dev vim dos2unix
-}
-
-function install_libyaml() {
-  local libyaml_src=$1
-
-  if [ $libyaml_src ]; then
-    display_message "Installing libyaml"
-    pushd /usr/local/src
-    wget $libyaml_src
-    local fname=$(file_name_from_path $libyaml_src)
-    tar xzf $fname
-    local prefix=${fname%\.tar\.gz}
-    cd $prefix
-    ./configure
-    make
-    make install
-    popd
-  fi
 }
 
 function apt_get_packages() {
@@ -144,38 +150,13 @@ function apt_get_packages() {
     install_postfix
   fi
 
-  # rkhunter root kit checker
-  if [ "$RKHUNTER" = 1 ]; then
-    display_message "Installing rkhunter"
-    apt-get -y install rkhunter
-    # The rkhunter --update command may have a non-zero return code
-    # even when no error occurs. From the man page:
-    #
-    # An exit code of zero for  this  command  option  means  that  no
-    # updates  were  available.  An  exit  code  of  one  means that a
-    # download error occurred, and a code of two means that  no  error
-    # occurred but updates were available and have been installed.
-    set +e
-    rkhunter --update
-    if [ $? -eq 1 ]; then
-      display_message "rkhunter --update failed"
-      exit 1
-    fi
-    set -e
-  fi
-
-  if [ "$CHKROOTKIT" = 1 ]; then
-    display_message "Installing chkrootkit"
-    apt-get -y install chkrootkit
-  fi
-
   if [ "$SHOREWALL" = 1 ]; then
     install_shorewall_firewall
   fi
 
   if [ "$EMACS" = 1 ]; then
     display_message "Installing emacs"
-    apt-get -y install emacs24-nox
+    apt-get -y install emacs-nox
   fi
 
   if [ "$JAVA" = 1 ]; then
@@ -196,6 +177,10 @@ function apt_get_packages() {
 
   if [ "$NGINX" = 1 ]; then
       install_nginx
+  fi
+
+  if [ "$RACKET" = 1 ]; then
+      apt-get -y install daemonize
   fi
 
   if [ "$POSTGRES" = 1 ]; then
@@ -474,15 +459,15 @@ function initialize() {
   fi
 }
 
-function update_sources_list() {
-  display_message 'Updating sources list:'
-  cat >> /etc/apt/sources.list <<EOF
-deb http://us.archive.ubuntu.com/ubuntu/ precise universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise universe
-deb http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
-EOF
-}
+# function update_sources_list() {
+#   display_message 'Updating sources list:'
+#   cat >> /etc/apt/sources.list <<EOF
+# deb http://us.archive.ubuntu.com/ubuntu/ precise universe
+# deb-src http://us.archive.ubuntu.com/ubuntu/ precise universe
+# deb http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
+# deb-src http://us.archive.ubuntu.com/ubuntu/ precise-updates universe
+# EOF
+# }
 
 function install_fail2ban() {
   display_message "Installing fail2ban"
@@ -616,28 +601,6 @@ net     ipv4
 EOF
 
   sed -i.orig -e '/^startup=/cstartup=1' /etc/default/shorewall
-}
-
-function install_tclink() {
-  local tclink_src=$1
-
-  if [ $tclink_src ]; then
-    pushd /usr/local/src
-    display_message "Downloading tclink"
-    wget $tclink_src
-    local fname=$(file_name_from_path $tclink_src)
-    display_message "Extracting tclink"
-    tar xzf $fname
-    local prefix=${fname%\.tar\.gz}
-    cd $prefix
-    display_message "Building tclink"
-    ./build.sh
-    display_message "Copying to Ruby extensions directory"
-    cp tclink.so /usr/local/lib/ruby/2.1.0/x86_64-linux/
-    display_message "Testing tclink"
-    ruby tctest.rb
-    popd
-  fi
 }
 
 function install_thttpd() {
@@ -850,7 +813,7 @@ function update_ubuntu() {
 display_message 'Begin cloud-setup.bash:'
 initialize
 display_message 'initialize complete:'
-update_sources_list
+#update_sources_list
 display_message 'update_sources_list complete:'
 configure_timezone $TIMEZONE
 display_message 'Changing root password:'
@@ -864,17 +827,14 @@ display_message 'ubuntu updated:'
 apt_get_packages
 display_message 'apt-get packages installed:'
 install_elasticsearch $ELASTICSEARCH_SOURCE
-install_libyaml $LIBYAML_SOURCE
-display_message 'libyaml installed:'
 install_ruby $RUBY_SOURCE
 hash -r  # start using the new Ruby
 display_message 'ruby installed:'
+install_racket
 install_gems
 display_message 'gems installed:'
 install_unicorn
 display_message 'unicorn installed:'
-install_tclink $TCLINK_SOURCE
-display_message 'tclink installed:'
 configure_ntp
 display_message 'ntp configured:'
 epilogue
