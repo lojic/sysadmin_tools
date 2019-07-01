@@ -131,7 +131,7 @@ function install_racket() {
     ../configure
     make
     make install
-    ln -s /usr/local/src/racket-7.1/bin/racket /usr/local/bin/racket
+    ln -s /usr/local/src/racket-7.3/bin/racket /usr/local/bin/racket
     popd
   fi
 }
