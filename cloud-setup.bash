@@ -9,7 +9,10 @@
 # 1) sudo update-locale LANG=en_US.UTF-8 # then logout/login
 
 # 2) Setup swap space with the following command:
-#    sudo dd if=/dev/zero of=/var/swapfile bs=1M count=2048 && sudo chmod 600 /var/swapfile && sudo mkswap /var/swapfile && echo /var/swapfile none swap defaults 0 0 | sudo tee -a /etc/fstab && sudo swapon -a
+#    sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096 && sudo chmod 600 /var/swapfile && sudo mkswap /var/swapfile && echo /var/swapfile none swap defaults 0 0 | sudo tee -a /etc/fstab && sudo swapon -a
+
+# 2a) sudo apt-get update
+# 2b) sudo apt-get upgrade
 
 # 3) If not installing postgres locally, install psql client-side packages:
 #    sudo apt-get install libecpg-dev postgresql-client-common postgresql-client
@@ -35,7 +38,7 @@
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2018 by Brian J. Adkins
+# Copyright (C) 2011-2019 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -121,8 +124,7 @@ function install_racket() {
     display_message "Installing Racket"
     pushd /usr/local/src
     wget https://mirror.racket-lang.org/installers/7.1/racket-7.1-src-builtpkgs.tgz
-    local fname=$(file_name_from_path $racket_src)
-    tar xzf $fname
+    tar xzf racket-7.1-src-builtpkgs.tgz
     cd racket-7.1/src
     mkdir build
     cd build
@@ -288,7 +290,7 @@ http {
   # gzip_http_version 1.1;
   # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 
-  upstream rails {
+  upstream racket {
     server localhost:4311;
   }
 
@@ -304,9 +306,9 @@ http {
 
     root /home/$USERNAME/$APP_NAME/current/public;
 
-    try_files \$uri/index.html \$uri.html \$uri @app;
+    try_files \$uri/index.html \$uri.html \$uri @racket;
 
-    location @rails {
+    location @racket {
       # an HTTP header important enough to have its own Wikipedia entry:
       #   http://en.wikipedia.org/wiki/X-Forwarded-For
       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -335,7 +337,7 @@ http {
       # per-response basis.
       # proxy_buffering off;
 
-      proxy_pass http://rails;
+      proxy_pass http://racket;
     }
 
     # Rails error pages
