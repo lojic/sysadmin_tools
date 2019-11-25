@@ -416,7 +416,7 @@ function create_user() {
     echo 'escape \034\034' > /home/${username}/.screenrc
     chown ${username}:${username} /home/${username}/.screenrc
     cat >> /home/${username}/.bashrc <<'EOF'
-if [ "$TERM" != "screen"  ]; then
+if [ -z "$STY"  ]; then
   screen -d -R
 fi
 EOF
