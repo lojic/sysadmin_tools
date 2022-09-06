@@ -8,37 +8,19 @@
 
 # 1) sudo update-locale LANG=en_US.UTF-8 # then logout/login
 
-# 2) Setup swap space with the following command:
-#    sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096 && sudo chmod 600 /var/swapfile && sudo mkswap /var/swapfile && echo /var/swapfile none swap defaults 0 0 | sudo tee -a /etc/fstab && sudo swapon -a
-
-# 2a) sudo apt-get update
-# 2b) sudo apt-get upgrade
-
-# 3) If not installing postgres locally, install psql client-side packages:
-#    sudo apt-get install libecpg-dev postgresql-client-common postgresql-client
-
-# 4) If Rails is installed (for execjs)
-#    sudo apt-get install nodejs
-
-# 5) Set the following values
+# 2) Set the following values
 #    APP_NAME
 #    APP_DOMAIN
 #    POSTFIX_DOMAIN  (if you want to send mail)
 #    PUBLIC_KEY_URL
 
-# TODO
-# build ruby without rdoc and ri
-# I think the following is unnecessary because the script should set the TZ
-# sudo dpkg-reconfigure tzdata   then choose US eastern
-
-
-# This Bash script sets up a new Ubuntu 18.04 (Bionic Beaver) LTS web server.
+# This Bash script sets up a new Ubuntu 22.04 LTS web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2020 by Brian J. Adkins
+# Copyright (C) 2011-2022 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -80,29 +62,29 @@ PUBLIC_KEY_URL=
 BUNDLER=0                # Install bundler gem
 CHKROOTKIT=1             # Install chkrootkit root kit checker via apt-get
 ECHO_COMMANDS=0          # Echo commands from script
-ELASTICSEARCH=0          # Install Elasticsearch
 EMACS=1                  # Install Emacs via apt-get
 FAIL2BAN=1               # Install fail2ban via apt-get
 JAVA=0                   # Install Java JRE
 NGINX=1                  # Install nginx
-POSTGRES=0               # Install Postgres database via apt-get
+NODE_JS=0                # Install nodejs for execjs if installing Rails (auto set if RAILS=1)
+POSTGRES=0               # Install Postgres database locally via apt-get
+POSTGRES_FOR_RDS=1       # Install Postgres library to allow using RDS
 RACKET=1                 # Install Racket
+RAILS=0                  # Install unicorn & nodejs
 RSSH=0                   # Install rssh restricted shell
 SCREEN=1                 # Install screen via apt-get
 SHOREWALL=0              # Install shorewall firewall via apt-get
-UNICORN=0                # Install Unicorn
+UNICORN=0                # Install Unicorn (auto set if RAILS=1)
 
 # Prevent prompts during postfix installation
 export DEBIAN_FRONTEND=noninteractive
-
-#ELASTICSEARCH_SOURCE=https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.3.2/elasticsearch-2.3.2.tar.gz
 
 # To install memcached, specify a RAM amount > 0 e.g. 16
 #MEMCACHED_RAM=16
 MEMCACHED_RAM=0
 
 # To install Ruby, specify a url for source
-#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.4.tar.gz
+#RUBY_SOURCE=https://cache.ruby-lang.org/pub/ruby/2.7/ruby-2.7.4.tar.gz
 RUBY_SOURCE=
 
 # To install thttpd, specify a port > 0 e.g. 8000
@@ -181,12 +163,22 @@ function apt_get_packages() {
       install_nginx
   fi
 
+  if [ "$NODE_JS" = 1 ]; then
+      display_message "Installing nodejs"
+      apt-get -y install nodejs
+  fi
+
   if [ "$RACKET" = 1 ]; then
       apt-get -y install daemonize
   fi
 
   if [ "$POSTGRES" = 1 ]; then
     install_postgres
+  fi
+
+  if [ "$POSTGRES_FOR_RDS" = 1 ]; then
+      display_message "Installing Postgres for RDS"
+      apt-get -y install libecpg-dev postgresql-client-common postgresql-client
   fi
 
   if [ "$THTTPD_PORT" -gt 0 ]; then
@@ -455,10 +447,15 @@ function initialize() {
   MEMCACHED_RAM=${MEMCACHED_RAM:-0}
   THTTPD_PORT=${THTTPD_PORT:-0}
 
-  # Elasticsearch requires Java
-  if [ "$ELASTICSEARCH" = 1 ]; then
-    JAVA=1
+  # Rails requires unicorn and nodejs
+  if [ "$RAILS" = 1 ]; then
+      UNICORN=1
+      NODE_JS=1
   fi
+  
+  # Setup swap space with the following command:
+  display_message "Setting up swap space"
+  sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096 && sudo chmod 600 /var/swapfile && sudo mkswap /var/swapfile && echo /var/swapfile none swap defaults 0 0 | sudo tee -a /etc/fstab && sudo swapon -a
 }
 
 # function update_sources_list() {
@@ -487,7 +484,7 @@ function install_fail2ban() {
 function install_gems() {
   if [ "$BUNDLER" = 1 ]; then
     display_message "Installing bundler gem"
-    gem install --no-rdoc --no-ri bundler
+    gem install --no-document bundler
   fi
 }
 
@@ -496,16 +493,6 @@ function install_nginx() {
   apt-get -y install nginx
   configure_nginx
   configure_logrotate
-}
-
-function install_elasticsearch() {
-  if [ "$ELASTICSEARCH" = 1 ]; then
-      # Download and install the Public Signing Key
-      wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
-      echo "deb https://packages.elastic.co/elasticsearch/2.x/debian stable main" | tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list
-      apt-get update && apt-get -y install elasticsearch
-      update-rc.d elasticsearch defaults 95 10
-  fi
 }
 
 function install_postfix() {
@@ -532,13 +519,11 @@ EOF
 
 # install_ruby <ruby source url>
 function install_ruby() {
-  local ruby_src=$1
-
-  if [ $ruby_src ]; then
+  if [ $RUBY_SOURCE ]; then
     display_message "Installing Ruby"
     pushd /usr/local/src
-    wget $ruby_src
-    local fname=$(file_name_from_path $ruby_src)
+    wget $RUBY_SOURCE
+    local fname=$(file_name_from_path $RUBY_SOURCE)
     tar xzf $fname
     local prefix=${fname%\.tar\.gz}
     cd $prefix
@@ -626,7 +611,7 @@ EOF
 function install_unicorn() {
   if [ "$UNICORN" = 1 ]; then
     display_message "Installing unicorn"
-    gem install --no-rdoc --no-ri unicorn
+    gem install --no-document unicorn
     mkdir /etc/unicorn
     cat > /etc/unicorn/$APP_NAME.conf <<EOF
 # Config variables for Rails sites used by other init scripts such as
@@ -815,8 +800,8 @@ function update_ubuntu() {
 display_message 'Begin cloud-setup.bash:'
 initialize
 display_message 'initialize complete:'
-#update_sources_list
-display_message 'update_sources_list complete:'
+# update_sources_list
+# display_message 'update_sources_list complete:'
 configure_timezone $TIMEZONE
 display_message 'Changing root password:'
 passwd # Change root passwd
@@ -828,8 +813,7 @@ update_ubuntu
 display_message 'ubuntu updated:'
 apt_get_packages
 display_message 'apt-get packages installed:'
-install_elasticsearch $ELASTICSEARCH_SOURCE
-install_ruby $RUBY_SOURCE
+install_ruby
 hash -r  # start using the new Ruby
 display_message 'ruby installed:'
 install_racket
