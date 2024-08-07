@@ -8,19 +8,22 @@
 
 # 1) sudo update-locale LANG=en_US.UTF-8 # then logout/login
 
-# 2) Set the following values
+# 2a) sudo apt-get update
+# 2b) sudo apt-get upgrade
+
+# 3) Set the following values
 #    APP_NAME
 #    APP_DOMAIN
 #    POSTFIX_DOMAIN  (if you want to send mail)
 #    PUBLIC_KEY_URL
 
-# This Bash script sets up a new Ubuntu 22.04 LTS web server.
+# This Bash script sets up a new Ubuntu 24.04 LTS web server.
 # ********
 # * NOTE * update update_sources_list() when switching Ubuntu versions
 # ********
 # https://github.com/lojic/sysadmin_tools/blob/master/cloud-setup.bash
 #
-# Copyright (C) 2011-2022 by Brian J. Adkins
+# Copyright (C) 2011-2024 by Brian J. Adkins
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -105,15 +108,16 @@ function install_racket() {
   if [ "$RACKET" = 1 ]; then
     display_message "Installing Racket"
     pushd /usr/local/src
-    wget https://mirror.racket-lang.org/installers/7.6/racket-7.6-src-builtpkgs.tgz
-    tar xzf racket-7.6-src-builtpkgs.tgz
-    cd racket-7.6/src
+    wget https://download.racket-lang.org/installers/8.13/racket-8.13-src-builtpkgs.tgz
+    tar xzf racket-8.13-src-builtpkgs.tgz
+    cd racket-8.13/src
     mkdir build
     cd build
     ../configure
     make
     make install
-    ln -s /usr/local/src/racket-7.6/bin/racket /usr/local/bin/racket
+    ln -s /usr/local/src/racket-8.13/bin/racket /usr/local/bin/racket
+    ln -s /usr/local/src/racket-8.13/bin/raco /usr/local/bin/raco
     popd
   fi
 }
